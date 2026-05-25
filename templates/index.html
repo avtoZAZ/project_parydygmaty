@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cyber Mentor AI - Jaki język wybrać?</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <canvas id="particles"></canvas>
+  <div class="glow glow-a"></div><div class="glow glow-b"></div>
+
+  <main class="app-shell glass">
+    <header>
+      <h1>⚡ Cyber Mentor AI</h1>
+      <p>Ekspercki quiz wyboru języka programowania</p>
+      <div class="progress-wrap"><div id="progress" class="progress"></div></div>
+    </header>
+
+    <section id="quiz"></section>
+
+    <section id="analysis" class="hidden">
+      <div class="scanner"></div>
+      <h2>Scanning profile...</h2>
+      <p>Analiza preferencji przez silnik Prolog</p>
+    </section>
+
+    <section id="result" class="hidden"></section>
+  </main>
+
+  <script>
+    window.QUESTIONS = {{ questions|tojson }};
+  </script>
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
