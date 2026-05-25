@@ -1,20 +1,35 @@
-# Notatki do prezentacji projektu
+# Tekst do prezentacji projektu (PL)
 
-## Co robi aplikacja?
-To system ekspercki pomagający wybrać język programowania na podstawie preferencji użytkownika. Użytkownik odpowiada na pytania, a aplikacja zwraca najlepszy język i alternatywy.
+Dzień dobry,
 
-## Dlaczego Prolog pasuje do systemu eksperckiego?
-Prolog naturalnie wspiera modelowanie wiedzy przez fakty i reguły. Dzięki temu łatwo opisać cechy języków i mechanizm wnioskowania oparty na dopasowaniu preferencji.
+Nasz projekt to **Doradca wyboru obiadu – Smart Kitchen AI**. To aplikacja, która pomaga zdecydować, co ugotować na obiad na podstawie składników dostępnych w domu.
 
-## Jakie paradygmaty zostały użyte?
-- **Logiczny**: reguły i fakty w `expert.pl`.
-- **Obiektowy**: klasy domenowe w Pythonie (`UserProfile`, `Question`, `Recommendation`).
-- **Funkcyjny**: list comprehensions, `reduce`, transformacje danych.
-- **Imperatywny**: przebieg quizu krok po kroku i obsługa API.
-- **Asynchroniczny (opcjonalnie)**: animowany etap analizy i `fetch` w JS.
+## Czym jest aplikacja?
+To nowoczesna aplikacja webowa w stylu cyberpunkowym. Użytkownik klika składniki w interfejsie „Twoja lodówka”, a system analizuje możliwe przepisy i zwraca najlepszą propozycję oraz alternatywy.
 
-## Krótkie demo na zajęciach
-1. Uruchomić aplikację Flask.
-2. Odpowiedzieć na kilka pytań (np. web + ai + prosta składnia).
-3. Pokazać wynik i wykres rankingowy.
-4. Otworzyć `expert.pl` i pokazać fakty oraz reguły decyzyjne.
+## Co robi Prolog?
+Prolog jest sercem systemu eksperckiego:
+- przechowuje fakty o przepisach i składnikach,
+- oblicza, które składniki pasują,
+- wylicza braki,
+- liczy procent dopasowania,
+- wybiera najlepszą rekomendację.
+
+## Dlaczego Prolog pasuje do problemu?
+Bo to klasyczny problem regułowy: mamy wiedzę (fakty) i wnioskowanie (reguły). Prolog idealnie wspiera taki model i pozwala czytelnie zapisać logikę decyzji.
+
+## Jakie paradygmaty wykorzystaliśmy?
+1. **Logiczny** – reguły decyzyjne i fakty w Prologu.
+2. **Obiektowy** – klasy domenowe w Pythonie.
+3. **Funkcyjny** – operacje map/filter/comprehensions.
+4. **Imperatywny** – przebieg aplikacji, request/response.
+5. **Asynchroniczny** – animowane skanowanie i płynne ładowanie wyników.
+
+## Jak pokazać demo?
+1. Uruchomić aplikację (`python app.py`).
+2. Zaznaczyć kilka składników, np. jajka, mleko, mąka, ser.
+3. Kliknąć „Znajdź obiad”.
+4. Pokazać wynik: najlepsze danie, procent dopasowania, składniki brakujące i alternatywy.
+5. Otworzyć `recipes.pl` i pokazać reguły `procent_dopasowania/3` i `najlepsza_rekomendacja/2`.
+
+Dziękuję.

@@ -3,159 +3,156 @@ from __future__ import annotations
 import json
 import subprocess
 from dataclasses import dataclass
-from functools import reduce
 from pathlib import Path
-from typing import Dict, List
+from typing import Any
 
 from flask import Flask, jsonify, render_template, request
 
 BASE_DIR = Path(__file__).resolve().parent
-PROLOG_FILE = BASE_DIR / "expert.pl"
+PROLOG_FILE = BASE_DIR / "recipes.pl"
 
 app = Flask(__name__)
 
 
-@dataclass
-class Question:
-    key: str
-    text: str
-    feature: str
+@dataclass(frozen=True)
+class Ingredient:
+    name: str
+    label: str
+    emoji: str
 
 
 @dataclass
-class UserProfile:
-    answers: Dict[str, bool]
-
-    def selected_features(self, questions: List[Question]) -> List[str]:
-        # Funkcyjne przetwarzanie odpowiedzi (list comprehension)
-        return [q.feature for q in questions if self.answers.get(q.key, False)]
-
-    def score(self) -> float:
-        values = list(self.answers.values())
-        if not values:
-            return 0.0
-        # Funkcyjny reduce
-        total_yes = reduce(lambda acc, current: acc + (1 if current else 0), values, 0)
-        return round((total_yes / len(values)) * 100, 1)
+class Recipe:
+    slug: str
+    name: str
+    needed: list[str]
+    has: list[str]
+    missing: list[str]
+    match_percent: int
+    difficulty: str
+    prep_time: int
 
 
 @dataclass
 class Recommendation:
-    language: str
+    best: Recipe
+    alternatives: list[Recipe]
     reason: str
-    match_percent: float
-    reasons: List[str]
-    alternatives: List[Dict[str, object]]
-    ranking: List[Dict[str, object]]
 
 
-QUESTIONS = [
-    Question("web", "Czy chcesz tworzyć strony internetowe?", "web"),
-    Question("ai", "Czy interesuje Cię AI / data science?", "ai"),
-    Question("math", "Czy lubisz matematykę?", "math"),
-    Question("games", "Czy chcesz pisać gry?", "games"),
-    Question("simple", "Czy wolisz prostą składnię?", "simple"),
-    Question("mobile", "Czy interesują Cię aplikacje mobilne?", "mobile"),
-    Question("quick", "Czy chcesz szybko zobaczyć efekty?", "quick"),
-    Question("logic", "Czy lubisz logiczne myślenie?", "logic"),
-    Question("performance", "Czy zależy Ci na wysokiej wydajności?", "performance"),
-    Question("corporate", "Czy chcesz pracować w korporacji?", "corporate"),
+@dataclass
+class UserPantry:
+    ingredients: list[str]
+
+    def normalized(self) -> list[str]:
+        return sorted(set([x.strip().lower() for x in self.ingredients if x.strip()]))
+
+
+def prolog_query(goal: str) -> str:
+    cmd = ["swipl", "-q", "-s", str(PROLOG_FILE), "-g", f"{goal}, halt."]
+    result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+    if result.returncode != 0:
+        raise RuntimeError(result.stderr.strip() or "Błąd SWI-Prolog")
+    lines = [line.strip() for line in result.stdout.splitlines() if line.strip()]
+    return lines[-1] if lines else ""
+
+
+def parse_list_atom(raw: str) -> list[str]:
+    cleaned = raw.strip().strip("[]")
+    if not cleaned:
+        return []
+    return [item.strip() for item in cleaned.split(",") if item.strip()]
+
+
+def get_recipes_for_pantry(user_ingredients: list[str]) -> list[Recipe]:
+    recipes = parse_list_atom(prolog_query("findall(D, przepis(D,_), Ds), writeln(Ds)"))
+    uterm = "[" + ",".join(user_ingredients) + "]"
+    rows: list[Recipe] = []
+
+    for recipe in recipes:
+        needed = parse_list_atom(prolog_query(f"skladniki_przepisu({recipe}, L), writeln(L)"))
+        has = parse_list_atom(prolog_query(f"pasujace_skladniki({recipe}, {uterm}, L), writeln(L)"))
+        missing = parse_list_atom(prolog_query(f"brakujace_skladniki({recipe}, {uterm}, L), writeln(L)"))
+        match_percent = int(prolog_query(f"procent_dopasowania({recipe}, {uterm}, P), writeln(P)"))
+        difficulty = prolog_query(f"trudnosc({recipe}, T), writeln(T)")
+        prep_time = int(prolog_query(f"czas({recipe}, C), writeln(C)"))
+        name = prolog_query(f"przepis({recipe}, N), writeln(N)")
+
+        rows.append(
+            Recipe(
+                slug=recipe,
+                name=name,
+                needed=needed,
+                has=has,
+                missing=missing,
+                match_percent=match_percent,
+                difficulty=difficulty,
+                prep_time=prep_time,
+            )
+        )
+
+    return sorted(rows, key=lambda r: (r.match_percent, -len(r.missing), -r.prep_time), reverse=True)
+
+
+def build_recommendation(recipes: list[Recipe]) -> Recommendation:
+    best = recipes[0]
+    alternatives = recipes[1:5]
+    reason = (
+        f"Wybrano {best.name}, bo ma najwyższe dopasowanie ({best.match_percent}%), "
+        f"niewiele braków ({len(best.missing)}) i czas przygotowania {best.prep_time} min."
+    )
+    return Recommendation(best=best, alternatives=alternatives, reason=reason)
+
+
+INGREDIENTS = [
+    Ingredient("jajka", "Jajka", "🥚"), Ingredient("mleko", "Mleko", "🥛"), Ingredient("maka", "Mąka", "🌾"),
+    Ingredient("ser", "Ser", "🧀"), Ingredient("pomidor", "Pomidor", "🍅"), Ingredient("makaron", "Makaron", "🍝"),
+    Ingredient("ryz", "Ryż", "🍚"), Ingredient("kurczak", "Kurczak", "🍗"), Ingredient("ziemniaki", "Ziemniaki", "🥔"),
+    Ingredient("cebula", "Cebula", "🧅"), Ingredient("czosnek", "Czosnek", "🧄"), Ingredient("maslo", "Masło", "🧈"),
+    Ingredient("smietana", "Śmietana", "🥣"), Ingredient("pieczarki", "Pieczarki", "🍄"), Ingredient("chleb", "Chleb", "🍞"),
+    Ingredient("tunczyk", "Tuńczyk", "🐟"), Ingredient("ogorek", "Ogórek", "🥒"), Ingredient("papryka", "Papryka", "🫑"),
+    Ingredient("fasola", "Fasola", "🫘"), Ingredient("kukurydza", "Kukurydza", "🌽"),
 ]
 
 
-def query_prolog(features: List[str]) -> List[Dict[str, object]]:
-    feature_term = "[" + ",".join(features) + "]"
-    goal = f"recommend_all({feature_term}, Results), writeln(Results), halt."
-    cmd = ["swipl", "-q", "-s", str(PROLOG_FILE), "-g", goal]
-    result = subprocess.run(cmd, capture_output=True, text=True, check=False)
-
-    if result.returncode != 0:
-        raise RuntimeError(
-            "Nie udało się uruchomić Prologa (SWI-Prolog). "
-            "Upewnij się, że 'swipl' jest zainstalowany.\n"
-            f"STDERR: {result.stderr.strip()}"
-        )
-
-    line = result.stdout.strip().splitlines()[-1] if result.stdout.strip() else "[]"
-    python_like = (
-        line.replace("[", "[")
-        .replace(")", ")")
-        .replace("'", '"')
-    )
-
-    # Parsowanie wyniku listy termów przez dedykowany endpoint JSON z Prologa
-    # Bezpieczniej: odpytać drugi cel, który zwraca JSON
-    json_goal = f"recommend_all_json({feature_term}, Json), writeln(Json), halt."
-    json_cmd = ["swipl", "-q", "-s", str(PROLOG_FILE), "-g", json_goal]
-    json_result = subprocess.run(json_cmd, capture_output=True, text=True, check=False)
-
-    if json_result.returncode != 0:
-        raise RuntimeError(f"Błąd przy odczycie JSON z Prologa: {json_result.stderr.strip()}")
-
-    json_payload = json_result.stdout.strip().splitlines()[-1] if json_result.stdout.strip() else "[]"
-    return json.loads(json_payload)
-
-
-def build_recommendation(raw: List[Dict[str, object]]) -> Recommendation:
-    if not raw:
-        return Recommendation(
-            language="Python",
-            reason="Domyślny wybór przy braku danych.",
-            match_percent=50.0,
-            reasons=["Uniwersalność", "Szybki start", "Duży ekosystem"],
-            alternatives=[],
-            ranking=[],
-        )
-
-    ranking = sorted(raw, key=lambda x: x["match_percent"], reverse=True)
-    best = ranking[0]
-    alternatives = ranking[1:4]
-
-    return Recommendation(
-        language=best["language"],
-        reason=best["justification"],
-        match_percent=best["match_percent"],
-        reasons=best["top_reasons"][:3],
-        alternatives=alternatives,
-        ranking=ranking[:6],
-    )
-
-
-@app.route("/")
-def index():
-    return render_template("index.html", questions=[q.__dict__ for q in QUESTIONS])
+@app.get("/")
+def index() -> str:
+    return render_template("index.html", ingredients=[i.__dict__ for i in INGREDIENTS])
 
 
 @app.post("/api/recommend")
-def recommend():
+def recommend() -> Any:
     payload = request.get_json(force=True)
-    answers = payload.get("answers", {})
+    pantry = UserPantry(payload.get("ingredients", []))
+    selected = pantry.normalized()
 
-    # Imperatywny przebieg sterowania + walidacja
-    normalized = {}
-    for q in QUESTIONS:
-        normalized[q.key] = bool(answers.get(q.key, False))
-
-    profile = UserProfile(normalized)
-    features = profile.selected_features(QUESTIONS)
+    if not selected:
+        return jsonify({"error": "Wybierz przynajmniej jeden składnik."}), 400
 
     try:
-        raw_results = query_prolog(features)
-    except RuntimeError as exc:
-        return jsonify({"error": str(exc)}), 500
+        recipe_rows = get_recipes_for_pantry(selected)
+    except Exception as exc:
+        return jsonify({"error": f"Błąd integracji z Prologiem: {exc}"}), 500
 
-    recommendation = build_recommendation(raw_results)
+    recommendation = build_recommendation(recipe_rows)
+
+    to_dict = lambda r: {
+        "slug": r.slug,
+        "name": r.name,
+        "needed": r.needed,
+        "has": r.has,
+        "missing": r.missing,
+        "match_percent": r.match_percent,
+        "difficulty": r.difficulty,
+        "prep_time": r.prep_time,
+    }
 
     return jsonify(
         {
-            "language": recommendation.language,
+            "selected": selected,
+            "best": to_dict(recommendation.best),
+            "alternatives": list(map(to_dict, recommendation.alternatives)),
             "reason": recommendation.reason,
-            "match_percent": recommendation.match_percent,
-            "reasons": recommendation.reasons,
-            "alternatives": recommendation.alternatives,
-            "ranking": recommendation.ranking,
-            "profile_energy": profile.score(),
-            "selected_features": features,
         }
     )
 
