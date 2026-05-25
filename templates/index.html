@@ -1,37 +1,36 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pl">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Cyber Mentor AI - Jaki język wybrać?</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Smart Kitchen AI</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"/>
 </head>
 <body>
-  <canvas id="particles"></canvas>
-  <div class="glow glow-a"></div><div class="glow glow-b"></div>
+<canvas id="bg-grid"></canvas>
+<div class="app">
+  <header class="hero glass">
+    <h1>🤖 Smart Kitchen AI</h1>
+    <p>Cyberpunkowy doradca wyboru obiadu oparty na Prologu</p>
+  </header>
 
-  <main class="app-shell glass">
-    <header>
-      <h1>⚡ Cyber Mentor AI</h1>
-      <p>Ekspercki quiz wyboru języka programowania</p>
-      <div class="progress-wrap"><div id="progress" class="progress"></div></div>
-    </header>
+  <section class="glass fridge">
+    <h2>🧊 Twoja lodówka</h2>
+    <div class="counter">Wybrane składniki: <span id="counter">0</span></div>
+    <div id="chips" class="chips"></div>
+    <button id="findBtn">Znajdź obiad</button>
+    <div class="progress-wrap"><div id="progress"></div></div>
+  </section>
 
-    <section id="quiz"></section>
+  <section id="loader" class="glass hidden">
+    <h3>Skanuję składniki...</h3>
+    <p>Analizuję przepisy w Prologu...</p>
+    <p>Szukam najlepszego obiadu...</p>
+  </section>
 
-    <section id="analysis" class="hidden">
-      <div class="scanner"></div>
-      <h2>Scanning profile...</h2>
-      <p>Analiza preferencji przez silnik Prolog</p>
-    </section>
-
-    <section id="result" class="hidden"></section>
-  </main>
-
-  <script>
-    window.QUESTIONS = {{ questions|tojson }};
-  </script>
-  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+  <section id="result" class="hidden"></section>
+</div>
+<script>window.INGREDIENTS={{ ingredients|tojson }};</script>
+<script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>
